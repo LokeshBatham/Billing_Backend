@@ -6,9 +6,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health check
+// Root route - for health checks and monitoring
+app.get('/', (_req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Billing Backend API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      products: '/api/products',
+      dashboard: '/api/dashboard'
+    }
+  });
+});
+
+// Health check endpoint
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Handle HEAD requests for root (common in health checks)
+app.head('/', (_req, res) => {
+  res.status(200).end();
 });
 
 // Load routes with error handling
