@@ -1,0 +1,104 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Note: package-lock.json should be committed for consistent installs
+# yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# Data files (uncomment if you don't want to commit data files)
+# data/
+# data/*.json
+
+# Vercel
+.vercel/
+.vercelignore
+
+# Testing
+.coverage/
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Optional: Keep data files for development but ignore sensitive ones
+# Uncomment the line below if you want to ignore all data files
+# data/*.json
+
+# Keep data directory structure but ignore content if needed
+# data/*.json
+
+# Local development
+.local/
+local/
+
+# Debug
+.vscode/launch.json
+.vscode/settings.json
+
+# Misc
+*.pem
+*.key
+*.cert
+.cache
+

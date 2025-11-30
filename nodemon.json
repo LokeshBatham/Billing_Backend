@@ -1,0 +1,23 @@
+{
+  "watch": [
+    "src"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "data/*.json",
+    "*.test.js",
+    "*.spec.js",
+    ".git",
+    ".vercel",
+    "api"
+  ],
+  "exec": "node src/index.js",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": "1000",
+  "verbose": false,
+  "colours": true
+}
+
