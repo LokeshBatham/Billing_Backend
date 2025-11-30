@@ -64,19 +64,22 @@ if (dashboardRoutes) {
   });
 }
 
-// 404 handler for unmatched API routes (must be last)
-app.use('/api/*', (req, res) => {
+// 404 handler for unmatched routes (must be last)
+// Note: Express 5 doesn't support /api/* pattern, so we use a catch-all
+app.use((req, res, next) => {
+  // Check if it's an API route that wasn't matched
+  if (req.path.startsWith('/api/')) {
+    console.log('[App] 404 - API route not found:', req.method, req.path);
+    return res.status(404).json({ 
+      error: 'API endpoint not found', 
+      path: req.path,
+      method: req.method,
+      availableRoutes: ['/api/auth', '/api/products', '/api/dashboard']
+    });
+  }
+  
+  // General 404 for non-API routes
   console.log('[App] 404 - Route not found:', req.method, req.path);
-  res.status(404).json({ 
-    error: 'API endpoint not found', 
-    path: req.path,
-    method: req.method,
-    availableRoutes: ['/api/auth', '/api/products', '/api/dashboard']
-  });
-});
-
-// General 404 handler
-app.use((req, res) => {
   res.status(404).json({ 
     error: 'Route not found', 
     path: req.path,
