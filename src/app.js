@@ -16,7 +16,9 @@ app.get('/', (_req, res) => {
       health: '/health',
       auth: '/api/auth',
       products: '/api/products',
-      dashboard: '/api/dashboard'
+      dashboard: '/api/dashboard',
+      customers: '/api/customers',
+      reports: '/api/reports'
     }
   });
 });
@@ -32,7 +34,7 @@ app.head('/', (_req, res) => {
 });
 
 // Load routes with error handling
-let productRoutes, authRoutes, dashboardRoutes;
+let productRoutes, authRoutes, dashboardRoutes, customerRoutes, reportsRoutes;
 
 try {
   productRoutes = require('./routes/productRoutes');
@@ -53,6 +55,20 @@ try {
   console.log('[App] Dashboard routes loaded');
 } catch (error) {
   console.error('[App] Error loading dashboard routes:', error);
+}
+
+try {
+  customerRoutes = require('./routes/customerRoutes');
+  console.log('[App] Customer routes loaded');
+} catch (error) {
+  console.error('[App] Error loading customer routes:', error);
+}
+
+try {
+  reportsRoutes = require('./routes/reportsRoutes');
+  console.log('[App] Reports routes loaded');
+} catch (error) {
+  console.error('[App] Error loading reports routes:', error);
 }
 
 // API Routes - register in order
@@ -78,10 +94,21 @@ if (dashboardRoutes) {
       routesLoaded: {
         dashboard: !!dashboardRoutes,
         products: !!productRoutes,
-        auth: !!authRoutes
+        auth: !!authRoutes,
+        customers: !!customerRoutes
       }
     });
   });
+}
+
+if (customerRoutes) {
+  app.use('/api/customers', customerRoutes);
+  console.log('[App] Customer routes registered at /api/customers');
+}
+
+if (reportsRoutes) {
+  app.use('/api/reports', reportsRoutes);
+  console.log('[App] Reports routes registered at /api/reports');
 }
 
 // 404 handler for unmatched routes (must be last)
@@ -94,7 +121,7 @@ app.use((req, res, next) => {
       error: 'API endpoint not found', 
       path: req.path,
       method: req.method,
-      availableRoutes: ['/api/auth', '/api/products', '/api/dashboard']
+      availableRoutes: ['/api/auth', '/api/products', '/api/dashboard', '/api/customers', '/api/reports']
     });
   }
   
