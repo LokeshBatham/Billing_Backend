@@ -1,7 +1,5 @@
 const { v4: uuid } = require('uuid');
-const { pool, init } = require('../utils/db');
-
-init().catch((err) => console.error('[DB] init error', err));
+const { pool } = require('../utils/db');
 
 const timestamp = () => new Date().toISOString();
 
