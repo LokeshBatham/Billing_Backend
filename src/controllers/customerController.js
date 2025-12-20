@@ -62,13 +62,20 @@ exports.create = async (req, res) => {
     const normalized = normalizeCustomerPayload(req.body);
     const validated = createCustomerSchema.parse(normalized);
 
-    const created = await createCustomer(validated);
-    return res.status(201).json(created);
+    try {
+      const created = await createCustomer(validated);
+      return res.status(201).json(created);
+    } catch (err) {
+      // Handle DB unique constraint (email) errors
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+      throw err;
+    }
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);
     }
-
     console.error('[CustomerController] Error creating customer:', error);
     return res.status(500).json({ error: 'Failed to create customer' });
   }
@@ -92,6 +99,10 @@ exports.update = async (req, res) => {
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);
+    }
+    // Handle DB unique constraint errors
+    if (error && error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Email already exists' });
     }
 
     console.error('[CustomerController] Error updating customer:', error);

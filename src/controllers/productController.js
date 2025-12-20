@@ -67,8 +67,15 @@ exports.create = async (req, res) => {
       }
     }
 
-    const created = await createProduct(validated);
-    return res.status(201).json(created);
+    try {
+      const created = await createProduct(validated);
+      return res.status(201).json(created);
+    } catch (err) {
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'SKU already exists' });
+      }
+      throw err;
+    }
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);
@@ -107,8 +114,15 @@ exports.update = async (req, res) => {
       }
     }
 
-    const updated = await updateProduct(id, validated);
-    return res.json(updated);
+    try {
+      const updated = await updateProduct(id, validated);
+      return res.json(updated);
+    } catch (err) {
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'SKU already exists' });
+      }
+      throw err;
+    }
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);

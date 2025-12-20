@@ -134,5 +134,14 @@ app.use((req, res, next) => {
   });
 });
 
+// Centralized error handler (must be after routes and 404 handler)
+try {
+  const errorHandler = require('./middleware/errorHandler');
+  app.use(errorHandler);
+  console.log('[App] Centralized error handler registered');
+} catch (err) {
+  console.error('[App] Failed to register error handler:', err);
+}
+
 module.exports = app;
 

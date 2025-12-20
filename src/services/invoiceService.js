@@ -1,80 +1,112 @@
-const path = require('path');
-const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
+const { v4: uuid } = require('uuid');
+const { pool, init } = require('../utils/db');
 
-const DATA_FILE = path.resolve(__dirname, '../../data/invoices.json');
+init().catch((err) => console.error('[DB] init error', err));
 
 const timestamp = () => new Date().toISOString();
 
 const clone = (invoice) => ({ ...invoice });
 
-const loadInvoices = async () => {
-  const data = await readJsonFile(DATA_FILE, []);
-  return Array.isArray(data) ? data : [];
-};
+const rowToInvoice = (row) => {
+  if (!row) return null;
+  let items = [];
+  let meta = {};
+  try {
+    items = row.items ? JSON.parse(row.items) : [];
+  } catch (e) {
+    items = [];
+  }
+  try {
+    meta = row.meta ? JSON.parse(row.meta) : {};
+  } catch (e) {
+    meta = {};
+  }
 
-const saveInvoices = async (items) => {
-  await writeJsonFile(DATA_FILE, items);
+  return {
+    id: row.id,
+    customerId: row.customerId,
+    date: row.date || null,
+    items,
+    total: row.total !== null && row.total !== undefined ? Number(row.total) : null,
+    status: row.status || null,
+    createdAt: row.createdAt || null,
+    updatedAt: row.updatedAt || null,
+    ...meta,
+  };
 };
 
 exports.getAllInvoices = async () => {
-  const invoices = await loadInvoices();
-  return invoices.map(clone);
+  const [rows] = await pool.query('SELECT * FROM invoices');
+  return rows.map(rowToInvoice).map(clone);
 };
 
 exports.getInvoiceById = async (id) => {
-  const invoices = await loadInvoices();
-  const invoice = invoices.find((item) => item.id === id);
-  return invoice ? clone(invoice) : null;
+  const [rows] = await pool.execute('SELECT * FROM invoices WHERE id = ? LIMIT 1', [id]);
+  if (!rows || rows.length === 0) return null;
+  return clone(rowToInvoice(rows[0]));
 };
 
 exports.createInvoice = async (payload) => {
-  const invoices = await loadInvoices();
   const now = timestamp();
-  const invoice = {
-    id: payload.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    date: payload.date || now,
-    createdAt: now,
-    updatedAt: now,
-    ...payload,
-  };
+  const id = payload.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const date = payload.date || now;
+  const customerId = payload.customerId || null;
+  const items = payload.items || [];
+  const total = payload.total !== undefined ? payload.total : null;
+  const status = payload.status || 'draft';
 
-  invoices.push(invoice);
-  await saveInvoices(invoices);
-  return clone(invoice);
+  const meta = { ...payload };
+  delete meta.id;
+  delete meta.date;
+  delete meta.customerId;
+  delete meta.items;
+  delete meta.total;
+  delete meta.status;
+
+  await pool.execute(
+    `INSERT INTO invoices (id, customerId, date, items, total, status, meta, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, customerId, date, JSON.stringify(items), total, status, JSON.stringify(meta), now, now]
+  );
+
+  return clone({ id, customerId, date, items, total, status, createdAt: now, updatedAt: now, ...meta });
 };
 
 exports.updateInvoice = async (id, payload) => {
-  const invoices = await loadInvoices();
-  const index = invoices.findIndex((item) => item.id === id);
+  const existing = await exports.getInvoiceById(id);
+  if (!existing) return null;
 
-  if (index === -1) {
-    return null;
-  }
+  const updatedAt = timestamp();
 
-  const current = invoices[index];
-  const updated = {
-    ...current,
-    ...payload,
-    id,
-    updatedAt: timestamp(),
-  };
+  const date = payload.date !== undefined ? payload.date : existing.date;
+  const customerId = payload.customerId !== undefined ? payload.customerId : existing.customerId;
+  const items = payload.items !== undefined ? payload.items : existing.items;
+  const total = payload.total !== undefined ? payload.total : existing.total;
+  const status = payload.status !== undefined ? payload.status : existing.status;
 
-  invoices[index] = updated;
-  await saveInvoices(invoices);
+  const meta = { ...existing };
+  delete meta.id;
+  delete meta.date;
+  delete meta.customerId;
+  delete meta.items;
+  delete meta.total;
+  delete meta.status;
+  delete meta.createdAt;
+  delete meta.updatedAt;
 
-  return clone(updated);
+  const newMeta = { ...meta, ...(payload.meta || {}) };
+
+  await pool.execute(
+    `UPDATE invoices SET customerId = ?, date = ?, items = ?, total = ?, status = ?, meta = ?, updatedAt = ? WHERE id = ?`,
+    [customerId, date, JSON.stringify(items), total, status, JSON.stringify(newMeta), updatedAt, id]
+  );
+
+  return clone({ id, customerId, date, items, total, status, createdAt: existing.createdAt, updatedAt, ...newMeta });
 };
 
 exports.deleteInvoice = async (id) => {
-  const invoices = await loadInvoices();
-  const index = invoices.findIndex((item) => item.id === id);
-
-  if (index === -1) {
-    return false;
-  }
-
-  invoices.splice(index, 1);
-  await saveInvoices(invoices);
-  return true;
+  const [result] = await pool.execute('DELETE FROM invoices WHERE id = ?', [id]);
+  const affected = result && (result.affectedRows || result.affectedRows === 0 ? result.affectedRows : result.affectedRows);
+  return affected > 0;
 };
 
