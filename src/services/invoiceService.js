@@ -8,16 +8,10 @@ const clone = (invoice) => ({ ...invoice });
 const rowToInvoice = (row) => {
   if (!row) return null;
   let items = [];
-  let meta = {};
   try {
     items = row.items ? JSON.parse(row.items) : [];
   } catch (e) {
     items = [];
-  }
-  try {
-    meta = row.meta ? JSON.parse(row.meta) : {};
-  } catch (e) {
-    meta = {};
   }
 
   return {
@@ -29,7 +23,6 @@ const rowToInvoice = (row) => {
     status: row.status || null,
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
-    ...meta,
   };
 };
 
@@ -52,22 +45,13 @@ exports.createInvoice = async (payload) => {
   const items = payload.items || [];
   const total = payload.total !== undefined ? payload.total : null;
   const status = payload.status || 'draft';
-
-  const meta = { ...payload };
-  delete meta.id;
-  delete meta.date;
-  delete meta.customerId;
-  delete meta.items;
-  delete meta.total;
-  delete meta.status;
-
   await pool.execute(
-    `INSERT INTO invoices (id, customerId, date, items, total, status, meta, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, customerId, date, JSON.stringify(items), total, status, JSON.stringify(meta), now, now]
+    `INSERT INTO invoices (id, customerId, date, items, total, status, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, customerId, date, JSON.stringify(items), total, status, now, now]
   );
 
-  return clone({ id, customerId, date, items, total, status, createdAt: now, updatedAt: now, ...meta });
+  return clone({ id, customerId, date, items, total, status, createdAt: now, updatedAt: now });
 };
 
 exports.updateInvoice = async (id, payload) => {
@@ -81,25 +65,12 @@ exports.updateInvoice = async (id, payload) => {
   const items = payload.items !== undefined ? payload.items : existing.items;
   const total = payload.total !== undefined ? payload.total : existing.total;
   const status = payload.status !== undefined ? payload.status : existing.status;
-
-  const meta = { ...existing };
-  delete meta.id;
-  delete meta.date;
-  delete meta.customerId;
-  delete meta.items;
-  delete meta.total;
-  delete meta.status;
-  delete meta.createdAt;
-  delete meta.updatedAt;
-
-  const newMeta = { ...meta, ...(payload.meta || {}) };
-
   await pool.execute(
-    `UPDATE invoices SET customerId = ?, date = ?, items = ?, total = ?, status = ?, meta = ?, updatedAt = ? WHERE id = ?`,
-    [customerId, date, JSON.stringify(items), total, status, JSON.stringify(newMeta), updatedAt, id]
+    `UPDATE invoices SET customerId = ?, date = ?, items = ?, total = ?, status = ?, updatedAt = ? WHERE id = ?`,
+    [customerId, date, JSON.stringify(items), total, status, updatedAt, id]
   );
 
-  return clone({ id, customerId, date, items, total, status, createdAt: existing.createdAt, updatedAt, ...newMeta });
+  return clone({ id, customerId, date, items, total, status, createdAt: existing.createdAt, updatedAt });
 };
 
 exports.deleteInvoice = async (id) => {

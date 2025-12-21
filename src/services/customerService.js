@@ -7,22 +7,16 @@ const clone = (customer) => ({ ...customer });
 
 const rowToCustomer = (row) => {
   if (!row) return null;
-  let meta = {};
-  try {
-    meta = row.meta ? JSON.parse(row.meta) : {};
-  } catch (e) {
-    meta = {};
-  }
-
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     phone: row.phone,
     address: row.address,
+    company: row.company || null,
+    taxId: row.taxId || null,
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
-    ...meta,
   };
 };
 
@@ -54,25 +48,20 @@ exports.searchCustomers = async (query) => {
 exports.createCustomer = async (payload) => {
   const id = uuid();
   const now = timestamp();
-
   const name = payload.name || null;
   const email = payload.email || null;
   const phone = payload.phone || null;
   const address = payload.address || null;
-
-  const meta = { ...payload };
-  delete meta.name;
-  delete meta.email;
-  delete meta.phone;
-  delete meta.address;
+  const company = payload.company || null;
+  const taxId = payload.taxId || null;
 
   await pool.execute(
-    `INSERT INTO customers (id, name, email, phone, address, meta, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, email, phone, address, JSON.stringify(meta), now, now]
+    `INSERT INTO customers (id, name, email, phone, address, company, taxId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, email, phone, address, company, taxId, now, now]
   );
 
-  return clone({ id, name, email, phone, address, createdAt: now, updatedAt: now, ...meta });
+  return clone({ id, name, email, phone, address, company, taxId, createdAt: now, updatedAt: now });
 };
 
 exports.updateCustomer = async (id, payload) => {
@@ -85,24 +74,15 @@ exports.updateCustomer = async (id, payload) => {
   const email = payload.email !== undefined ? payload.email : existing.email;
   const phone = payload.phone !== undefined ? payload.phone : existing.phone;
   const address = payload.address !== undefined ? payload.address : existing.address;
-
-  const meta = { ...existing };
-  delete meta.id;
-  delete meta.name;
-  delete meta.email;
-  delete meta.phone;
-  delete meta.address;
-  delete meta.createdAt;
-  delete meta.updatedAt;
-
-  const newMeta = { ...meta, ...(payload.meta || {}) };
+  const company = payload.company !== undefined ? payload.company : existing.company;
+  const taxId = payload.taxId !== undefined ? payload.taxId : existing.taxId;
 
   await pool.execute(
-    `UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, meta = ?, updatedAt = ? WHERE id = ?`,
-    [name, email, phone, address, JSON.stringify(newMeta), updatedAt, id]
+    `UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, company = ?, taxId = ?, updatedAt = ? WHERE id = ?`,
+    [name, email, phone, address, company, taxId, updatedAt, id]
   );
 
-  return clone({ id, name, email, phone, address, createdAt: existing.createdAt, updatedAt, ...newMeta });
+  return clone({ id, name, email, phone, address, company, taxId, createdAt: existing.createdAt, updatedAt, });
 };
 
 exports.deleteCustomer = async (id) => {

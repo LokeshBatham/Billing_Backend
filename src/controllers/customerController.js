@@ -6,6 +6,7 @@ const {
   updateCustomer,
   deleteCustomer,
 } = require('../services/customerService');
+const { isReady: dbIsReady } = require('../utils/db');
 const {
   createCustomerSchema,
   updateCustomerSchema,
@@ -58,6 +59,9 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
   try {
     const normalized = normalizeCustomerPayload(req.body);
     const validated = createCustomerSchema.parse(normalized);
@@ -83,6 +87,10 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   const { id } = req.params;
+
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
 
   try {
     const existing = await getCustomerById(id);

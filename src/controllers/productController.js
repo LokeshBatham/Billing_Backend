@@ -6,6 +6,7 @@ const {
   deleteProduct,
   isSkuTaken,
 } = require('../services/productService');
+const { isReady: dbIsReady } = require('../utils/db');
 const {
   createProductSchema,
   updateProductSchema,
@@ -25,6 +26,10 @@ const handleZodError = (error, res) => {
 };
 
 exports.list = async (_req, res) => {
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
+
   try {
     const products = await getAllProducts();
     return res.json(products);
@@ -52,6 +57,9 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
   try {
     const normalized = normalizeProductPayload(req.body);
     const validated = createProductSchema.parse(normalized);
@@ -89,6 +97,10 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   const { id } = req.params;
+
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
 
   try {
     const existing = await getProductById(id);

@@ -7,22 +7,38 @@ const clone = (product) => ({ ...product });
 
 const rowToProduct = (row) => {
   if (!row) return null;
-  let meta = {};
-  try {
-    meta = row.meta ? JSON.parse(row.meta) : {};
-  } catch (e) {
-    meta = {};
-  }
-
   return {
     id: row.id,
     sku: row.sku,
     name: row.name,
-    description: row.description,
+    category: row.category,
+    unit: row.unit,
+    purchasePrice: row.purchasePrice !== null && row.purchasePrice !== undefined ? Number(row.purchasePrice) : null,
+    sellingPrice: row.sellingPrice !== null && row.sellingPrice !== undefined ? Number(row.sellingPrice) : null,
     price: row.price !== null && row.price !== undefined ? Number(row.price) : null,
+    taxRate: row.taxRate !== null && row.taxRate !== undefined ? Number(row.taxRate) : null,
+    stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : 0,
+    reorderLevel: row.reorderLevel !== null && row.reorderLevel !== undefined ? Number(row.reorderLevel) : 0,
+    barcode: row.barcode,
+    brand: row.brand,
+    hsn: row.hsn,
+    discount: row.discount !== null && row.discount !== undefined ? Number(row.discount) : null,
+    discountType: row.discountType,
+    supplier: row.supplier,
+    batch: row.batch,
+    expiry: row.expiry,
+    mfg: row.mfg,
+    image: row.image,
+    description: row.description,
+    location: row.location,
+    weight: row.weight,
+    color: row.color,
+    size: row.size,
+    status: row.status,
+    isFavorite: !!row.isFavorite,
+    isBestSeller: !!row.isBestSeller,
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
-    ...meta,
   };
 };
 
@@ -50,26 +66,80 @@ exports.isSkuTaken = async (sku, excludeId) => {
 exports.createProduct = async (payload) => {
   const id = uuid();
   const now = timestamp();
-
-  const sku = payload.sku || null;
-  const name = payload.name || null;
-  const description = payload.description || null;
-  const price = payload.price !== undefined ? payload.price : null;
-  const meta = { ...payload };
-
-  // Remove known columns from meta to avoid duplication
-  delete meta.sku;
-  delete meta.name;
-  delete meta.description;
-  delete meta.price;
+  const cols = {
+    sku: payload.sku || null,
+    name: payload.name || null,
+    category: payload.category || null,
+    unit: payload.unit || null,
+    purchasePrice: payload.purchasePrice !== undefined ? payload.purchasePrice : null,
+    sellingPrice: payload.sellingPrice !== undefined ? payload.sellingPrice : null,
+    price: payload.price !== undefined ? payload.price : null,
+    taxRate: payload.taxRate !== undefined ? payload.taxRate : null,
+    stock: payload.stock !== undefined ? payload.stock : 0,
+    reorderLevel: payload.reorderLevel !== undefined ? payload.reorderLevel : 0,
+    barcode: payload.barcode || null,
+    brand: payload.brand || null,
+    hsn: payload.hsn || null,
+    discount: payload.discount !== undefined ? payload.discount : null,
+    discountType: payload.discountType || 'percentage',
+    supplier: payload.supplier || null,
+    batch: payload.batch || null,
+    expiry: payload.expiry || null,
+    mfg: payload.mfg || null,
+    image: payload.image || null,
+    description: payload.description || null,
+    location: payload.location || null,
+    weight: payload.weight || null,
+    color: payload.color || null,
+    size: payload.size || null,
+    status: payload.status || 'active',
+    isFavorite: payload.isFavorite ? 1 : 0,
+    isBestSeller: payload.isBestSeller ? 1 : 0,
+  };
 
   await pool.execute(
-    `INSERT INTO products (id, sku, name, description, price, meta, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, sku, name, description, price, JSON.stringify(meta), now, now]
+    `INSERT INTO products (
+      id, sku, name, category, unit, purchasePrice, sellingPrice, price,
+      taxRate, stock, reorderLevel, barcode, brand, hsn, discount, discountType,
+      supplier, batch, expiry, mfg, image, description, location, weight,
+      color, size, status, isFavorite, isBestSeller, createdAt, updatedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      cols.sku,
+      cols.name,
+      cols.category,
+      cols.unit,
+      cols.purchasePrice,
+      cols.sellingPrice,
+      cols.price,
+      cols.taxRate,
+      cols.stock,
+      cols.reorderLevel,
+      cols.barcode,
+      cols.brand,
+      cols.hsn,
+      cols.discount,
+      cols.discountType,
+      cols.supplier,
+      cols.batch,
+      cols.expiry,
+      cols.mfg,
+      cols.image,
+      cols.description,
+      cols.location,
+      cols.weight,
+      cols.color,
+      cols.size,
+      cols.status,
+      cols.isFavorite,
+      cols.isBestSeller,
+      now,
+      now,
+    ]
   );
 
-  return clone({ id, sku, name, description, price, createdAt: now, updatedAt: now, ...meta });
+  return clone({ id, ...cols, createdAt: now, updatedAt: now });
 };
 
 exports.updateProduct = async (id, payload) => {
@@ -83,25 +153,79 @@ exports.updateProduct = async (id, payload) => {
   const description = payload.description !== undefined ? payload.description : existing.description;
   const price = payload.price !== undefined ? payload.price : existing.price;
 
-  const meta = { ...existing };
-  // Remove known fields
-  delete meta.id;
-  delete meta.sku;
-  delete meta.name;
-  delete meta.description;
-  delete meta.price;
-  delete meta.createdAt;
-  delete meta.updatedAt;
-
-  // Merge with new payload fields that are not primary columns
-  const newMeta = { ...meta, ...(payload.meta || {}) };
+  const cols = {
+    sku: payload.sku !== undefined ? payload.sku : existing.sku,
+    name: payload.name !== undefined ? payload.name : existing.name,
+    category: payload.category !== undefined ? payload.category : existing.category,
+    unit: payload.unit !== undefined ? payload.unit : existing.unit,
+    purchasePrice: payload.purchasePrice !== undefined ? payload.purchasePrice : existing.purchasePrice,
+    sellingPrice: payload.sellingPrice !== undefined ? payload.sellingPrice : existing.sellingPrice,
+    price: payload.price !== undefined ? payload.price : existing.price,
+    taxRate: payload.taxRate !== undefined ? payload.taxRate : existing.taxRate,
+    stock: payload.stock !== undefined ? payload.stock : existing.stock,
+    reorderLevel: payload.reorderLevel !== undefined ? payload.reorderLevel : existing.reorderLevel,
+    barcode: payload.barcode !== undefined ? payload.barcode : existing.barcode,
+    brand: payload.brand !== undefined ? payload.brand : existing.brand,
+    hsn: payload.hsn !== undefined ? payload.hsn : existing.hsn,
+    discount: payload.discount !== undefined ? payload.discount : existing.discount,
+    discountType: payload.discountType !== undefined ? payload.discountType : existing.discountType,
+    supplier: payload.supplier !== undefined ? payload.supplier : existing.supplier,
+    batch: payload.batch !== undefined ? payload.batch : existing.batch,
+    expiry: payload.expiry !== undefined ? payload.expiry : existing.expiry,
+    mfg: payload.mfg !== undefined ? payload.mfg : existing.mfg,
+    image: payload.image !== undefined ? payload.image : existing.image,
+    description: payload.description !== undefined ? payload.description : existing.description,
+    location: payload.location !== undefined ? payload.location : existing.location,
+    weight: payload.weight !== undefined ? payload.weight : existing.weight,
+    color: payload.color !== undefined ? payload.color : existing.color,
+    size: payload.size !== undefined ? payload.size : existing.size,
+    status: payload.status !== undefined ? payload.status : existing.status,
+    isFavorite: payload.isFavorite !== undefined ? (payload.isFavorite ? 1 : 0) : (existing.isFavorite ? 1 : 0),
+    isBestSeller: payload.isBestSeller !== undefined ? (payload.isBestSeller ? 1 : 0) : (existing.isBestSeller ? 1 : 0),
+  };
 
   await pool.execute(
-    `UPDATE products SET sku = ?, name = ?, description = ?, price = ?, meta = ?, updatedAt = ? WHERE id = ?`,
-    [sku, name, description, price, JSON.stringify(newMeta), updatedAt, id]
+    `UPDATE products SET
+      sku = ?, name = ?, category = ?, unit = ?, purchasePrice = ?, sellingPrice = ?, price = ?,
+      taxRate = ?, stock = ?, reorderLevel = ?, barcode = ?, brand = ?, hsn = ?, discount = ?, discountType = ?,
+      supplier = ?, batch = ?, expiry = ?, mfg = ?, image = ?, description = ?, location = ?, weight = ?,
+      color = ?, size = ?, status = ?, isFavorite = ?, isBestSeller = ?, updatedAt = ?
+     WHERE id = ?`,
+    [
+      cols.sku,
+      cols.name,
+      cols.category,
+      cols.unit,
+      cols.purchasePrice,
+      cols.sellingPrice,
+      cols.price,
+      cols.taxRate,
+      cols.stock,
+      cols.reorderLevel,
+      cols.barcode,
+      cols.brand,
+      cols.hsn,
+      cols.discount,
+      cols.discountType,
+      cols.supplier,
+      cols.batch,
+      cols.expiry,
+      cols.mfg,
+      cols.image,
+      cols.description,
+      cols.location,
+      cols.weight,
+      cols.color,
+      cols.size,
+      cols.status,
+      cols.isFavorite,
+      cols.isBestSeller,
+      updatedAt,
+      id,
+    ]
   );
 
-  return clone({ id, sku, name, description, price, createdAt: existing.createdAt, updatedAt, ...newMeta });
+  return clone({ id, ...cols, createdAt: existing.createdAt, updatedAt });
 };
 
 exports.deleteProduct = async (id) => {
