@@ -1,3 +1,49 @@
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const Product = require('../src/models/Product');
+const Customer = require('../src/models/Customer');
+const Invoice = require('../src/models/Invoice');
+
+dotenv.config();
+
+const up = async () => {
+  console.log('[migrate] Connecting to MongoDB...');
+  const uri = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://localhost:27017/billing_db';
+  await mongoose.connect(uri, { dbName: process.env.MONGO_DB_NAME || 'billing_db' });
+
+  console.log('[migrate] Ensuring indexes...');
+  try {
+    await Promise.all([Product.init(), Customer.init(), Invoice.init()]);
+  } catch (err) {
+    console.error('[migrate] Index creation error:', err);
+  }
+
+  console.log('[migrate] UP complete');
+  await mongoose.disconnect();
+  process.exit(0);
+};
+
+const down = async () => {
+  console.log('[migrate] DOWN is destructive for MongoDB and not implemented.');
+  process.exit(1);
+};
+
+const run = async () => {
+  const arg = process.argv[2] || 'up';
+  try {
+    if (arg === 'up') await up();
+    else if (arg === 'down') await down();
+    else {
+      console.error('Usage: node migrate.js [up|down]');
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error('[migrate] Error:', err);
+    process.exit(1);
+  }
+};
+
+run();
 const { pool } = require('../src/utils/db');
 const dotenv = require('dotenv');
 
