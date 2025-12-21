@@ -7,7 +7,7 @@ let _ready = false;
 const isReady = () => _ready;
 
 const buildMongoUri = () => {
-  const explicit = process.env.MONGO_URI || process.env.MONGO_URL;
+  const explicit = "mongodb://mongo:zHJKcmEauobVHBMTpNGKSculBbJTeKFG@mongodb.railway.internal:27017";
   if (explicit && explicit.trim()) return explicit.trim();
 
   const user = 'mongo';
