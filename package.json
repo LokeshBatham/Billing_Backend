@@ -24,6 +24,6 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "mongoose": "^7.5.0",
+    "mongoose": "^7.5.0"
   }
 }
