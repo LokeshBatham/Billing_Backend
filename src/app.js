@@ -6,6 +6,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Simple request logger to aid debugging incoming requests
+app.use((req, res, next) => {
+  console.log('[App] Incoming request:', req.method, req.path);
+  next();
+});
+
 // Root route - for health checks and monitoring
 app.get('/', (_req, res) => {
   res.json({ 
@@ -77,6 +83,17 @@ if (authRoutes) {
   console.log('[App] Auth routes registered at /api/auth');
 }
 
+// Backwards compatibility: accept legacy /api/register path
+try {
+  const authController = require('./controllers/authController');
+  const registerRouter = express.Router();
+  registerRouter.post('/', authController.register);
+  app.use('/api/register', registerRouter);
+  console.log('[App] Legacy /api/register POST handler registered at /api/register');
+} catch (err) {
+  console.error('[App] Failed to register legacy /api/register handler:', err);
+}
+
 if (productRoutes) {
   app.use('/api/products', productRoutes);
   console.log('[App] Product routes registered at /api/products');
@@ -121,7 +138,7 @@ app.use((req, res, next) => {
       error: 'API endpoint not found', 
       path: req.path,
       method: req.method,
-      availableRoutes: ['/api/auth', '/api/products', '/api/dashboard', '/api/customers', '/api/reports']
+      availableRoutes: ['/api/auth', '/api/register', '/api/products', '/api/dashboard', '/api/customers', '/api/reports']
     });
   }
   

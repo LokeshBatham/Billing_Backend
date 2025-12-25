@@ -4,8 +4,8 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon",
-    "start": "node src/index.js",
+    "dev": "cross-env NODE_ENV=development nodemon",
+    "start": "cross-env NODE_ENV=production node src/index.js",
     "migrate": "node scripts/migrate.js up",
     "migrate:down": "node scripts/migrate.js down",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -24,6 +24,8 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "mongoose": "^7.5.0"
+    "mongoose": "^7.5.0",
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.22"
   }
 }

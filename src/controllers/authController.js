@@ -1,5 +1,10 @@
 const { loginSchema, normalizeLoginPayload } = require('../validators/authValidator');
+const { registerSchema, normalizeRegisterPayload } = require('../validators/registerValidator');
 const { authenticateUser } = require('../services/authService');
+const { createUser, findByEmail } = require('../services/userService');
+const LoginLog = require('../models/LoginLog');
+const jwt = require('jsonwebtoken');
+const getJwtSecret = () => process.env.JWT_SECRET || 'change_me_in_production';
 
 const handleZodError = (error, res) => {
   const details = error.errors.map((issue) => ({
@@ -23,6 +28,26 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Record login log (best-effort)
+    try {
+      const user = await findByEmail(email);
+      if (user) {
+        await LoginLog.create({
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          mobile: user.contact,
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          loginAt: new Date(),
+        });
+      }
+    } catch (logErr) {
+      // do not block login on logging failure
+      // eslint-disable-next-line no-console
+      console.warn('[Auth] Failed to record login log:', logErr);
+    }
+
     return res.json(authResult);
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -32,6 +57,78 @@ exports.login = async (req, res) => {
     // eslint-disable-next-line no-console
     console.error(error);
     return res.status(500).json({ error: 'Failed to login' });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    // Try to identify user by Authorization token or by email in body
+    let userId = null;
+    const authHeader = req.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const decoded = jwt.verify(token, getJwtSecret());
+        userId = decoded.sub;
+      } catch (e) {
+        // ignore token errors, fallback to body
+      }
+    }
+
+    if (!userId && req.body && req.body.email) {
+      const user = await findByEmail(req.body.email);
+      if (user) userId = user._id;
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Unable to determine user for logout' });
+    }
+
+    // Find latest login log without logoutAt and set logoutAt
+    const log = await LoginLog.findOne({ userId, logoutAt: null }).sort({ loginAt: -1 }).exec();
+    if (!log) {
+      return res.status(404).json({ error: 'No active login session found' });
+    }
+
+    log.logoutAt = new Date();
+    await log.save();
+
+    return res.json({ success: true, message: 'Logged out' });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[Auth] logout error', error);
+    return res.status(500).json({ error: 'Failed to logout' });
+  }
+};
+
+exports.register = async (req, res) => {
+  try {
+    const normalized = normalizeRegisterPayload(req.body);
+    const { name, contact, email, companyName, state, city, password } = registerSchema.parse(normalized);
+
+    const user = await createUser({ name, contact, email, companyName, state, city, password });
+
+    return res.status(201).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      contact: user.contact,
+      companyName: user.companyName,
+      state: user.state,
+      city: user.city,
+    });
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return handleZodError(error, res);
+    }
+
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    // eslint-disable-next-line no-console
+    console.error(error);
+    return res.status(500).json({ error: 'Failed to register user' });
   }
 };
 
