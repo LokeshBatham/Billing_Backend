@@ -1,10 +1,16 @@
 const {
   getAllCustomers,
+  getAllCustomersByOrg,
   getCustomerById,
+  getCustomerByIdAndOrg,
   searchCustomers,
+  searchCustomersForOrg,
   createCustomer,
+  createCustomerForOrg,
   updateCustomer,
+  updateCustomerForOrg,
   deleteCustomer,
+  deleteCustomerForOrg,
 } = require('../services/customerService');
 const { isReady: dbIsReady } = require('../utils/db');
 const {
@@ -31,9 +37,9 @@ exports.list = async (req, res) => {
     
     let customers;
     if (search) {
-      customers = await searchCustomers(search);
+      customers = await searchCustomersForOrg(req.orgId, search);
     } else {
-      customers = await getAllCustomers();
+      customers = await getAllCustomersByOrg(req.orgId);
     }
     
     return res.json(customers);
@@ -45,7 +51,7 @@ exports.list = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const customer = await getCustomerById(req.params.id);
+    const customer = await getCustomerByIdAndOrg(req.params.id, req.orgId);
 
     if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
@@ -67,7 +73,7 @@ exports.create = async (req, res) => {
     const validated = createCustomerSchema.parse(normalized);
 
     try {
-      const created = await createCustomer(validated);
+      const created = await createCustomerForOrg(req.orgId, validated);
       return res.status(201).json(created);
     } catch (err) {
       // Handle DB unique constraint (email) errors
@@ -93,7 +99,7 @@ exports.update = async (req, res) => {
   }
 
   try {
-    const existing = await getCustomerById(id);
+    const existing = await getCustomerByIdAndOrg(id, req.orgId);
 
     if (!existing) {
       return res.status(404).json({ error: 'Customer not found' });
@@ -102,7 +108,7 @@ exports.update = async (req, res) => {
     const normalized = normalizeCustomerPayload(req.body);
     const validated = updateCustomerSchema.parse(normalized);
 
-    const updated = await updateCustomer(id, validated);
+    const updated = await updateCustomerForOrg(req.orgId, id, validated);
     return res.json(updated);
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -122,7 +128,7 @@ exports.remove = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const removed = await deleteCustomer(id);
+    const removed = await deleteCustomerForOrg(req.orgId, id);
 
     if (!removed) {
       return res.status(404).json({ error: 'Customer not found' });

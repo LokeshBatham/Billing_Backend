@@ -1,13 +1,13 @@
-const { getAllInvoices } = require('./invoiceService');
-const { getCustomerById } = require('./customerService');
+const { getAllInvoices, getAllInvoicesByOrg } = require('./invoiceService');
+const { getCustomerById, getCustomerByIdAndOrg } = require('./customerService');
 
 /**
  * Get all sales/invoices for reports
  * @returns {Promise<Array>} Array of formatted invoice/sale objects
  */
-exports.getSalesReport = async () => {
+exports.getSalesReport = async (orgId) => {
   try {
-    const invoices = await getAllInvoices();
+    const invoices = orgId ? await getAllInvoicesByOrg(orgId) : await getAllInvoices();
 
     // Format invoices to match frontend Invoice type, enrich with customer and computed fields
     const formattedSales = await Promise.all(invoices.map(async (invoice) => {
@@ -30,7 +30,9 @@ exports.getSalesReport = async () => {
       let customer = invoice.customer || null;
       if (!customer && invoice.customerId) {
         try {
-          customer = await getCustomerById(invoice.customerId);
+          customer = orgId
+            ? await getCustomerByIdAndOrg(invoice.customerId, orgId)
+            : await getCustomerById(invoice.customerId);
         } catch (e) {
           customer = null;
         }

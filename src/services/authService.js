@@ -6,15 +6,23 @@ const getJwtSecret = () => process.env.JWT_SECRET || 'change_me_in_production';
 
 const sanitizeUser = (user) => ({
   id: user._id,
+  orgId: user.orgId,
   email: user.email,
   name: user.name,
   role: user.role,
 });
 
-exports.authenticateUser = async (email, password) => {
+exports.authenticateUser = async (companyName, email, password) => {
   const user = await findByEmail(email);
+  console.log("user",user);
 
   if (!user || !user.passwordHash) {
+    return null;
+  }
+
+  const requestedCompany = String(companyName || '').trim().toLowerCase();
+  const storedCompany = String(user.companyName || '').trim().toLowerCase();
+  if (!requestedCompany || !storedCompany || requestedCompany !== storedCompany) {
     return null;
   }
 
@@ -25,6 +33,7 @@ exports.authenticateUser = async (email, password) => {
 
   const payload = {
     sub: user._id.toString(),
+    orgId: user.orgId,
     email: user.email,
     role: user.role,
   };

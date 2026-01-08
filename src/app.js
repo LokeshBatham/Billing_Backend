@@ -6,6 +6,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Optionally parse Authorization header if present to populate req.user / req.orgId
+try {
+  const authMiddleware = require('./middleware/authMiddleware');
+  if (authMiddleware && typeof authMiddleware.optional === 'function') {
+    app.use(authMiddleware.optional);
+  }
+} catch (err) {
+  // ignore auth middleware load failures
+}
+
+// Required auth middleware for protected routes
+let requireAuth;
+try {
+  requireAuth = require('./middleware/authMiddleware');
+} catch (err) {
+  requireAuth = null;
+}
+
 // Simple request logger to aid debugging incoming requests
 app.use((req, res, next) => {
   console.log('[App] Incoming request:', req.method, req.path);
@@ -93,6 +111,16 @@ try {
 } catch (err) {
   console.error('[App] Failed to register legacy /api/register handler:', err);
 }
+
+// Global guard: require JWT for all /api/* endpoints except auth + legacy register
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth')) return next();
+  if (req.path.startsWith('/register')) return next();
+  if (!requireAuth) {
+    return res.status(500).json({ error: 'AuthMiddlewareUnavailable' });
+  }
+  return requireAuth(req, res, next);
+});
 
 if (productRoutes) {
   app.use('/api/products', productRoutes);

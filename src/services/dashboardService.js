@@ -1,15 +1,15 @@
-const { getAllInvoices } = require('./invoiceService');
-const { getAllProducts } = require('./productService');
+const { getAllInvoices, getAllInvoicesByOrg } = require('./invoiceService');
+const { getAllProducts, getAllProductsByOrg } = require('./productService');
 
 /**
  * Get dashboard data including sales/invoices and products
  * @returns {Promise<{sales: Array, products: Array}>}
  */
-exports.getDashboardData = async () => {
+exports.getDashboardData = async (orgId) => {
   try {
     const [sales, products] = await Promise.all([
-      getAllInvoices(),
-      getAllProducts(),
+      orgId ? getAllInvoicesByOrg(orgId) : getAllInvoices(),
+      orgId ? getAllProductsByOrg(orgId) : getAllProducts(),
     ]);
 
     // Ensure sales have the required structure

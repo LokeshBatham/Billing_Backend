@@ -21,16 +21,16 @@ const isReady = () => _ready;
  * 2. Compose from components: MONGO_USER, MONGO_PASSWORD, MONGO_HOST, MONGO_PORT
  */
 const buildMongoUri = () => {
-  const explicit = process.env.MONGO_URI || process.env.MONGO_URL;
+  const explicit = process.env.VITE_MONGO_URI || process.env.VITE_MONGO_URL;
   if (explicit && explicit.trim()) return explicit.trim();
 
   // Require components from env if full URI not provided
-  const host = process.env.MONGO_HOST;
+  const host = process.env.VITE_MONGO_HOST;
   // const port = process.env.MONGO_PORT;
-  const dbName = process.env.MONGO_DB_NAME;
+  const dbName = process.env.VITE_MONGO_DB_NAME;
 
-  const user = process.env.MONGO_USER;
-  const pass = process.env.MONGO_PASSWORD;
+  const user = process.env.VITE_MONGO_USER;
+  const pass = process.env.VITE_MONGO_PASSWORD;
 
   // Do not fall back to any hardcoded defaults. Require env variables to be set.
   if (!host || !dbName) {
@@ -48,12 +48,12 @@ const init = async () => {
   const uri = buildMongoUri();
 
   // Connection options
-  const poolSize = parseInt(process.env.DB_POOL || process.env.MONGO_POOL || '5', 10) || 5;
+  const poolSize = parseInt(process.env.VITE_DB_POOL || process.env.VITE_MONGO_POOL || '5', 10) || 5;
   const connectOpts = {
     // modern mongoose uses unified topology by default; include safe defaults
     maxPoolSize: poolSize,
     // set dbName explicitly if MONGO_URI does not include it
-    dbName: process.env.MONGO_DB_NAME || undefined,
+    dbName: process.env.VITE_MONGO_DB_NAME || undefined,
   };
 
   try {

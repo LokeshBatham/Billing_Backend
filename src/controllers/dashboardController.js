@@ -8,7 +8,7 @@ exports.getDashboard = async (_req, res) => {
 
   try {
     console.log('[Dashboard] Fetching dashboard data...');
-    const data = await getDashboardData();
+    const data = await getDashboardData(_req.orgId);
     console.log('[Dashboard] Data fetched successfully:', {
       salesCount: data.sales?.length || 0,
       productsCount: data.products?.length || 0

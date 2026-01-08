@@ -7,7 +7,7 @@ exports.getSales = async (req, res) => {
   }
 
   try {
-    const sales = await getSalesReport();
+    const sales = await getSalesReport(req.orgId);
     return res.json(sales);
   } catch (error) {
     console.error('[ReportsController] Error fetching sales:', error);
