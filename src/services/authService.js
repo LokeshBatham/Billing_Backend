@@ -1,32 +1,28 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-const USERS = [
-  {
-    id: '1',
-    email: 'admin@example.com',
-    passwordHash: bcrypt.hashSync('Admin@123', 10),
-    name: 'Administrator',
-    role: 'admin',
-  },
-];
+const { findByEmail } = require('./userService');
 
 const getJwtSecret = () => process.env.JWT_SECRET || 'change_me_in_production';
 
 const sanitizeUser = (user) => ({
-  id: user.id,
+  id: user._id,
+  orgId: user.orgId,
   email: user.email,
   name: user.name,
   role: user.role,
 });
 
-const findUserByEmail = (email) =>
-  USERS.find((user) => user.email.toLowerCase() === email.toLowerCase());
+exports.authenticateUser = async (companyName, email, password) => {
+  const user = await findByEmail(email);
+  console.log("user",user);
 
-exports.authenticateUser = async (email, password) => {
-  const user = findUserByEmail(email);
+  if (!user || !user.passwordHash) {
+    return null;
+  }
 
-  if (!user) {
+  const requestedCompany = String(companyName || '').trim().toLowerCase();
+  const storedCompany = String(user.companyName || '').trim().toLowerCase();
+  if (!requestedCompany || !storedCompany || requestedCompany !== storedCompany) {
     return null;
   }
 
@@ -36,7 +32,8 @@ exports.authenticateUser = async (email, password) => {
   }
 
   const payload = {
-    sub: user.id,
+    sub: user._id.toString(),
+    orgId: user.orgId,
     email: user.email,
     role: user.role,
   };

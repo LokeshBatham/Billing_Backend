@@ -1,80 +1,77 @@
-const path = require('path');
-const { readJsonFile, writeJsonFile } = require('../utils/jsonStore');
-
-const DATA_FILE = path.resolve(__dirname, '../../data/invoices.json');
+const { v4: uuid } = require('uuid');
+const Invoice = require('../models/Invoice');
 
 const timestamp = () => new Date().toISOString();
 
 const clone = (invoice) => ({ ...invoice });
 
-const loadInvoices = async () => {
-  const data = await readJsonFile(DATA_FILE, []);
-  return Array.isArray(data) ? data : [];
-};
-
-const saveInvoices = async (items) => {
-  await writeJsonFile(DATA_FILE, items);
-};
-
 exports.getAllInvoices = async () => {
-  const invoices = await loadInvoices();
-  return invoices.map(clone);
+  const docs = await Invoice.find().lean();
+  return docs.map(clone);
+};
+
+exports.getAllInvoicesByOrg = async (orgId) => {
+  if (!orgId) return exports.getAllInvoices();
+  const docs = await Invoice.find({ orgId }).lean();
+  return docs.map(clone);
 };
 
 exports.getInvoiceById = async (id) => {
-  const invoices = await loadInvoices();
-  const invoice = invoices.find((item) => item.id === id);
-  return invoice ? clone(invoice) : null;
+  const doc = await Invoice.findOne({ id }).lean();
+  if (!doc) return null;
+  return clone(doc);
+};
+
+exports.getInvoiceByIdAndOrg = async (id, orgId) => {
+  if (!orgId) return exports.getInvoiceById(id);
+  const doc = await Invoice.findOne({ id, orgId }).lean();
+  if (!doc) return null;
+  return clone(doc);
 };
 
 exports.createInvoice = async (payload) => {
-  const invoices = await loadInvoices();
   const now = timestamp();
-  const invoice = {
-    id: payload.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    date: payload.date || now,
-    createdAt: now,
-    updatedAt: now,
-    ...payload,
-  };
+  const id = payload.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const doc = await Invoice.create({ id, ...payload, createdAt: now, updatedAt: now });
+  return clone(doc.toObject());
+};
 
-  invoices.push(invoice);
-  await saveInvoices(invoices);
-  return clone(invoice);
+exports.createInvoiceForOrg = async (orgId, payload) => {
+  if (!orgId) return exports.createInvoice(payload);
+  const now = timestamp();
+  const id = payload.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const doc = await Invoice.create({ id, orgId, ...payload, createdAt: now, updatedAt: now });
+  return clone(doc.toObject());
 };
 
 exports.updateInvoice = async (id, payload) => {
-  const invoices = await loadInvoices();
-  const index = invoices.findIndex((item) => item.id === id);
+  const existing = await exports.getInvoiceById(id);
+  if (!existing) return null;
+  const updatedAt = timestamp();
+  const updated = await Invoice.findOneAndUpdate({ id }, { ...payload, updatedAt }, { new: true }).lean();
+  return clone(updated);
+};
 
-  if (index === -1) {
-    return null;
-  }
-
-  const current = invoices[index];
-  const updated = {
-    ...current,
-    ...payload,
-    id,
-    updatedAt: timestamp(),
-  };
-
-  invoices[index] = updated;
-  await saveInvoices(invoices);
-
+exports.updateInvoiceForOrg = async (orgId, id, payload) => {
+  if (!orgId) return exports.updateInvoice(id, payload);
+  const existing = await exports.getInvoiceByIdAndOrg(id, orgId);
+  if (!existing) return null;
+  const updatedAt = timestamp();
+  const updated = await Invoice.findOneAndUpdate(
+    { id, orgId },
+    { ...payload, updatedAt },
+    { new: true }
+  ).lean();
   return clone(updated);
 };
 
 exports.deleteInvoice = async (id) => {
-  const invoices = await loadInvoices();
-  const index = invoices.findIndex((item) => item.id === id);
-
-  if (index === -1) {
-    return false;
-  }
-
-  invoices.splice(index, 1);
-  await saveInvoices(invoices);
-  return true;
+  const res = await Invoice.deleteOne({ id });
+  return res.deletedCount > 0;
 };
 
+exports.deleteInvoiceForOrg = async (orgId, id) => {
+  if (!orgId) return exports.deleteInvoice(id);
+  const res = await Invoice.deleteOne({ id, orgId });
+  return res.deletedCount > 0;
+};

@@ -1,8 +1,13 @@
 const { getSalesReport } = require('../services/reportsService');
+const { isReady: dbIsReady } = require('../utils/db');
 
 exports.getSales = async (req, res) => {
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
+
   try {
-    const sales = await getSalesReport();
+    const sales = await getSalesReport(req.orgId);
     return res.json(sales);
   } catch (error) {
     console.error('[ReportsController] Error fetching sales:', error);
