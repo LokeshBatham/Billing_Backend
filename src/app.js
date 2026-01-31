@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 
@@ -187,6 +188,8 @@ try {
 } catch (err) {
   console.error('[App] Failed to register error handler:', err);
 }
+
+app.use('/api/payments', paymentRoutes);
 
 module.exports = app;
 

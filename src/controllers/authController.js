@@ -117,17 +117,19 @@ exports.logout = async (req, res) => {
 
 exports.register = async (req, res) => {
   try {
+    console.log('[Auth] Register request body:', req.body);
     const normalized = normalizeRegisterPayload(req.body);
+    console.log('[Auth] Normalized payload:', normalized);
     const {
       name,
       contact,
       email,
       companyName,
-      country,
       state,
       city,
       password,
     } = registerSchema.parse(normalized);
+    console.log('[Auth] Validation passed, creating user...');
     const orgId = `org_${uuid().slice(0, 8)}`;
     const user = await createUser({
       orgId,
@@ -141,16 +143,18 @@ exports.register = async (req, res) => {
       createdAt: timestamp(),
       password,
     });
+    console.log('[Auth] User created:', user._id);
 
     const tenant = await Tenant.create({
       orgId,
       companyName,
-      country: country || "IN",
+      country: "IN",
       stateName: state,
       city,
       status: "active",
       createdAt: timestamp(),
     });
+    console.log('[Auth] Tenant created:', tenant._id);
 
     // 3️⃣ Generate JWT (IMPORTANT: includes orgId)
     const token = jwt.sign(
@@ -170,7 +174,6 @@ exports.register = async (req, res) => {
       email: user.email,
       contact: user.contact,
       companyName: user.companyName,
-      country: user.country,
       state: user.state,
       city: user.city,
       message: "Company registered successfully",
@@ -189,6 +192,7 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('[Auth] Register error:', error);
     if (error.name === "ZodError") {
       return handleZodError(error, res);
     }
@@ -198,7 +202,11 @@ exports.register = async (req, res) => {
     }
 
     // eslint-disable-next-line no-console
-    console.error(error);
-    return res.status(500).json({ error: "Failed to register user" });
+    console.error('[Auth] Unexpected error:', error.message, error.stack);
+    return res.status(500).json({ 
+      error: "Failed to register user", 
+      details: error.message,
+      type: error.name 
+    });
   }
 };

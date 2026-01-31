@@ -5,7 +5,7 @@ const { init } = require('./utils/db');
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || process.env.VITE_PORT || 5000;
 
 (async () => {
   try {

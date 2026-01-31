@@ -19,8 +19,8 @@ exports.registerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   contact: z.string().min(6, 'Contact is required'),
   email: z.string().email('Email must be valid'),
-  companyName: z.string().optional(),
-  state: z.string().optional(),
-  city: z.string().optional(),
+  companyName: z.string().min(1, 'Company name is required'),
+  state: z.string().min(1, 'State is required'),
+  city: z.string().min(1, 'City is required'),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });

@@ -54,6 +54,8 @@ const init = async () => {
     maxPoolSize: poolSize,
     // set dbName explicitly if MONGO_URI does not include it
     dbName: process.env.VITE_MONGO_DB_NAME || undefined,
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
   };
 
   try {
