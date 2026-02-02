@@ -60,6 +60,8 @@ app.head('/', (_req, res) => {
 
 // Load routes with error handling
 let productRoutes, authRoutes, dashboardRoutes, customerRoutes, reportsRoutes;
+let invoiceRoutes;
+let billingRoutes;
 
 try {
   productRoutes = require('./routes/productRoutes');
@@ -96,6 +98,20 @@ try {
   console.error('[App] Error loading reports routes:', error);
 }
 
+try {
+  invoiceRoutes = require('./routes/invoiceRoutes');
+  console.log('[App] Invoice routes loaded');
+} catch (error) {
+  console.error('[App] Error loading invoice routes:', error);
+}
+
+try {
+  billingRoutes = require('./routes/billingRoutes');
+  console.log('[App] Billing routes loaded');
+} catch (error) {
+  console.error('[App] Error loading billing routes:', error);
+}
+
 // API Routes - register in order
 if (authRoutes) {
   app.use('/api/auth', authRoutes);
@@ -117,6 +133,8 @@ try {
 app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/auth')) return next();
   if (req.path.startsWith('/register')) return next();
+  // Allow anonymous invoice creation (frontend offline/guest checkout)
+  if (req.path.startsWith('/invoices')) return next();
   if (!requireAuth) {
     return res.status(500).json({ error: 'AuthMiddlewareUnavailable' });
   }
@@ -155,6 +173,16 @@ if (customerRoutes) {
 if (reportsRoutes) {
   app.use('/api/reports', reportsRoutes);
   console.log('[App] Reports routes registered at /api/reports');
+}
+
+if (invoiceRoutes) {
+  app.use('/api/invoices', invoiceRoutes);
+  console.log('[App] Invoice routes registered at /api/invoices');
+}
+
+if (billingRoutes) {
+  app.use('/api/billing-history', billingRoutes);
+  console.log('[App] Billing history routes registered at /api/billing-history');
 }
 
 // 404 handler for unmatched routes (must be last)
