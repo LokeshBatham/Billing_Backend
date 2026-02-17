@@ -22,6 +22,8 @@ const BillingHistorySchema = new mongoose.Schema({
   tax: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
+  refundTotal: { type: Number, default: 0 },
+  refundStatus: { type: String, enum: ['none', 'partial', 'full'], default: 'none' },
   paymentStatus: { type: String, default: 'pending' },
   paymentMethod: { type: String },
   transactionId: { type: String },

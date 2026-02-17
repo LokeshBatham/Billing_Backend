@@ -112,6 +112,14 @@ try {
   console.error('[App] Error loading billing routes:', error);
 }
 
+let refundRoutes;
+try {
+  refundRoutes = require('./routes/refundRoutes');
+  console.log('[App] Refund routes loaded');
+} catch (error) {
+  console.error('[App] Error loading refund routes:', error);
+}
+
 // API Routes - register in order
 if (authRoutes) {
   app.use('/api/auth', authRoutes);
@@ -183,6 +191,11 @@ if (invoiceRoutes) {
 if (billingRoutes) {
   app.use('/api/billing-history', billingRoutes);
   console.log('[App] Billing history routes registered at /api/billing-history');
+}
+
+if (refundRoutes) {
+  app.use('/api/refunds', refundRoutes);
+  console.log('[App] Refund routes registered at /api/refunds');
 }
 
 // 404 handler for unmatched routes (must be last)

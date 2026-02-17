@@ -9,6 +9,15 @@ const InvoiceSchema = new mongoose.Schema({
   items: { type: Array, default: [] },
   total: { type: Number },
   status: { type: String, default: 'draft' },
+  refundTotal: {
+    type: Number,
+    default: 0
+  },
+  refundStatus: {
+    type: String,
+    enum: ['none', 'partial', 'full'],
+    default: 'none'
+  },
   createdAt: { type: String },
   updatedAt: { type: String },
 });
