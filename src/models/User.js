@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     companyName: { type: String, trim: true },
     state: { type: String, trim: true },
     city: { type: String, trim: true },
+    razorpayKeyId: { type: String, trim: true },
     passwordHash: { type: String },
     role: {
       type: String,

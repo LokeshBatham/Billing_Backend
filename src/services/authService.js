@@ -38,11 +38,11 @@ exports.authenticateUser = async (companyName, email, password) => {
     role: user.role,
   };
 
-  const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '1h' });
+  const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
 
   return {
     token,
-    expiresIn: 3600,
+    expiresIn: 86400,
     user: sanitizeUser(user),
   };
 };

@@ -62,6 +62,7 @@ app.head('/', (_req, res) => {
 let productRoutes, authRoutes, dashboardRoutes, customerRoutes, reportsRoutes;
 let invoiceRoutes;
 let billingRoutes;
+let userRoutes;
 
 try {
   productRoutes = require('./routes/productRoutes');
@@ -110,6 +111,13 @@ try {
   console.log('[App] Billing routes loaded');
 } catch (error) {
   console.error('[App] Error loading billing routes:', error);
+}
+
+try {
+  userRoutes = require('./routes/userRoutes');
+  console.log('[App] User routes loaded');
+} catch (error) {
+  console.error('[App] Error loading user routes:', error);
 }
 
 let refundRoutes;
@@ -176,6 +184,11 @@ if (dashboardRoutes) {
 if (customerRoutes) {
   app.use('/api/customers', customerRoutes);
   console.log('[App] Customer routes registered at /api/customers');
+}
+
+if (userRoutes) {
+  app.use('/api/users', userRoutes);
+  console.log('[App] User routes registered at /api/users');
 }
 
 if (reportsRoutes) {
