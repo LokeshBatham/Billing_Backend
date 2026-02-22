@@ -7,7 +7,7 @@ const {
   normalizeRegisterPayload,
 } = require("../validators/registerValidator");
 const { authenticateUser } = require("../services/authService");
-const { createUser, findByEmail } = require("../services/userService");
+const { createUser, findByEmailAndCompanyName, findByEmail } = require("../services/userService");
 const LoginLog = require("../models/LoginLog");
 const Tenant = require("../models/Tenant");
 const jwt = require("jsonwebtoken");
@@ -30,9 +30,14 @@ const handleZodError = (error, res) => {
 
 exports.login = async (req, res) => {
   try {
+    console.log("Login request body:", req.body);
     const normalized = normalizeLoginPayload(req.body);
-    const { companyName, email, password } = loginSchema.parse(normalized);
-    const authResult = await authenticateUser(companyName, email, password);
+    console.log("Normalized payload:", normalized);
+    const { companyName, email, password, loginAsStaff } = loginSchema.parse(normalized);
+    console.log("Parsed credentials:", { companyName, email, loginAsStaff, passwordLength: password?.length });
+    
+    const authResult = await authenticateUser(companyName, email, password, loginAsStaff);
+    console.log("Auth result:", authResult ? "Success" : "Failed");
 
     if (!authResult) {
       return res.status(401).json({ error: "Invalid company name, email or password" });
@@ -40,7 +45,7 @@ exports.login = async (req, res) => {
 
     // Record login log (best-effort)
     try {
-      const user = await findByEmail(email);
+      const user = await findByEmailAndCompanyName(email, companyName);
       if (user) {
         await LoginLog.create({
           userId: user._id,

@@ -147,6 +147,7 @@ try {
 
 // Global guard: require JWT for all /api/* endpoints except auth + legacy register
 app.use('/api', (req, res, next) => {
+  if (req.method === 'OPTIONS') return next();
   if (req.path.startsWith('/auth')) return next();
   if (req.path.startsWith('/register')) return next();
   // Allow anonymous invoice creation (frontend offline/guest checkout)

@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const productController = require('../controllers/productController');
+const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -28,14 +29,19 @@ const upload = multer({
 
 // Bulk upload routes (must be before /:id to avoid conflicts)
 router.get('/bulk/template', productController.downloadTemplate);
-router.post('/bulk/upload', upload.single('file'), productController.bulkUpload);
+router.post(
+  '/bulk/upload',
+  auth.authorizePermissions('products'),
+  upload.single('file'),
+  productController.bulkUpload
+);
 
 router.get('/', productController.list);
 router.get('/barcode/:barcode', productController.getByBarcode);
 router.get('/:id', productController.getById);
-router.post('/', productController.create);
-router.put('/:id', productController.update);
-router.delete('/:id', productController.remove);
+router.post('/', auth.authorizePermissions('products'), productController.create);
+router.put('/:id', auth.authorizePermissions('products'), productController.update);
+router.delete('/:id', auth.authorizePermissions('products'), productController.remove);
 
 
 module.exports = router;
