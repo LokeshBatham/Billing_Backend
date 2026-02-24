@@ -42,7 +42,7 @@ exports.getSalesReport = async (orgId) => {
         id: invoice.id,
         date: invoice.date || invoice.createdAt || new Date().toISOString(),
         total,
-        paymentMethod: invoice.paymentMethod || invoice.payment || 'Cash',
+        paymentMethod: invoice.paymentMethod || 'Cash',
         items,
         subtotal,
         tax,
