@@ -1,11 +1,12 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Register = require('../models/Register');
+const { findByEmail } = require('./userService');
 
-const getJwtSecret = () => process.env.VITE_JWT_SECRET || process.env.JWT_SECRET || 'change_me_in_production';
+const getJwtSecret = () => process.env.JWT_SECRET || 'change_me_in_production';
 
 const sanitizeUser = (user) => ({
-  id: user._id.toString(),
+  id: user._id,
+  orgId: user.orgId,
   email: user.email,
   name: user.name,
   role: user.role,
@@ -14,10 +15,17 @@ const sanitizeUser = (user) => ({
   orgId: user.orgId,
 });
 
-exports.authenticateUser = async (email, password) => {
-  const user = await Register.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+exports.authenticateUser = async (companyName, email, password) => {
+  const user = await findByEmail(email);
+  console.log("user",user);
 
-  if (!user) {
+  if (!user || !user.passwordHash) {
+    return null;
+  }
+
+  const requestedCompany = String(companyName || '').trim().toLowerCase();
+  const storedCompany = String(user.companyName || '').trim().toLowerCase();
+  if (!requestedCompany || !storedCompany || requestedCompany !== storedCompany) {
     return null;
   }
 
@@ -28,6 +36,7 @@ exports.authenticateUser = async (email, password) => {
 
   const payload = {
     sub: user._id.toString(),
+    orgId: user.orgId,
     email: user.email,
     role: user.role,
     orgId: user.orgId,

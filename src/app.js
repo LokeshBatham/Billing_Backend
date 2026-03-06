@@ -1,10 +1,35 @@
 const express = require('express');
 const cors = require('cors');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Optionally parse Authorization header if present to populate req.user / req.orgId
+try {
+  const authMiddleware = require('./middleware/authMiddleware');
+  if (authMiddleware && typeof authMiddleware.optional === 'function') {
+    app.use(authMiddleware.optional);
+  }
+} catch (err) {
+  // ignore auth middleware load failures
+}
+
+// Required auth middleware for protected routes
+let requireAuth;
+try {
+  requireAuth = require('./middleware/authMiddleware');
+} catch (err) {
+  requireAuth = null;
+}
+
+// Simple request logger to aid debugging incoming requests
+app.use((req, res, next) => {
+  console.log('[App] Incoming request:', req.method, req.path);
+  next();
+});
 
 // Root route - for health checks and monitoring
 app.get('/', (_req, res) => {
@@ -110,6 +135,29 @@ if (authRoutes) {
   console.log('[App] Auth routes registered at /api/auth');
 }
 
+// Backwards compatibility: accept legacy /api/register path
+try {
+  const authController = require('./controllers/authController');
+  const registerRouter = express.Router();
+  registerRouter.post('/', authController.register);
+  app.use('/api/register', registerRouter);
+  console.log('[App] Legacy /api/register POST handler registered at /api/register');
+} catch (err) {
+  console.error('[App] Failed to register legacy /api/register handler:', err);
+}
+
+// Global guard: require JWT for all /api/* endpoints except auth + legacy register
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth')) return next();
+  if (req.path.startsWith('/register')) return next();
+  // Allow anonymous invoice creation (frontend offline/guest checkout)
+  if (req.path.startsWith('/invoices')) return next();
+  if (!requireAuth) {
+    return res.status(500).json({ error: 'AuthMiddlewareUnavailable' });
+  }
+  return requireAuth(req, res, next);
+});
+
 if (productRoutes) {
   app.use('/api/products', productRoutes);
   console.log('[App] Product routes registered at /api/products');
@@ -163,6 +211,10 @@ if (userRoutes) {
   app.use('/api/users', userRoutes);
   console.log('[App] User routes registered at /api/users');
 }
+if (billingRoutes) {
+  app.use('/api/billing-history', billingRoutes);
+  console.log('[App] Billing history routes registered at /api/billing-history');
+}
 
 // 404 handler for unmatched routes (must be last)
 // Note: Express 5 doesn't support /api/* pattern, so we use a catch-all
@@ -174,7 +226,7 @@ app.use((req, res, next) => {
       error: 'API endpoint not found', 
       path: req.path,
       method: req.method,
-      availableRoutes: ['/api/auth', '/api/products', '/api/dashboard', '/api/customers', '/api/reports', '/api/billing-history', '/api/invoices', '/api/refunds', '/api/users']
+      availableRoutes: ['/api/auth', '/api/register', '/api/products', '/api/dashboard', '/api/customers', '/api/reports']
     });
   }
   
@@ -186,6 +238,17 @@ app.use((req, res, next) => {
     method: req.method
   });
 });
+
+// Centralized error handler (must be after routes and 404 handler)
+try {
+  const errorHandler = require('./middleware/errorHandler');
+  app.use(errorHandler);
+  console.log('[App] Centralized error handler registered');
+} catch (err) {
+  console.error('[App] Failed to register error handler:', err);
+}
+
+app.use('/api/payments', paymentRoutes);
 
 module.exports = app;
 

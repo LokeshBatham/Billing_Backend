@@ -1,19 +1,18 @@
 const mongoose = require('mongoose');
+const { v4: uuid } = require('uuid');
 
-const invoiceSchema = new mongoose.Schema({
-  orgId: String,
-  invoiceNumber: String,
-  date: String,
+const InvoiceSchema = new mongoose.Schema({
+  orgId: { type: String, index: true },
+  id: { type: String, default: () => `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, index: { unique: true } },
+  customerId: { type: String },
+  date: { type: String },
   items: { type: Array, default: [] },
-  subtotal: Number,
-  discount: Number,
-  tax: Number,
-  total: Number,
-  paymentMethod: String,
-  customer: { type: mongoose.Schema.Types.Mixed, default: null },
-  status: { type: String, default: 'paid' },
-  createdDate: String,
-  createdTime: String,
-}, { timestamps: true });
+  total: { type: Number },
+  status: { type: String, default: 'draft' },
+  createdAt: { type: String },
+  updatedAt: { type: String },
+});
 
-module.exports = mongoose.model('Invoice', invoiceSchema, 'invoices');
+InvoiceSchema.index({ orgId: 1, date: 1 });
+
+module.exports = mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);

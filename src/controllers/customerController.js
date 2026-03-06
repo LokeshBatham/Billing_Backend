@@ -1,11 +1,18 @@
 const {
   getAllCustomers,
+  getAllCustomersByOrg,
   getCustomerById,
+  getCustomerByIdAndOrg,
   searchCustomers,
+  searchCustomersForOrg,
   createCustomer,
+  createCustomerForOrg,
   updateCustomer,
+  updateCustomerForOrg,
   deleteCustomer,
+  deleteCustomerForOrg,
 } = require('../services/customerService');
+const { isReady: dbIsReady } = require('../utils/db');
 const {
   createCustomerSchema,
   updateCustomerSchema,
@@ -30,9 +37,9 @@ exports.list = async (req, res) => {
     
     let customers;
     if (search) {
-      customers = await searchCustomers(search);
+      customers = await searchCustomersForOrg(req.orgId, search);
     } else {
-      customers = await getAllCustomers();
+      customers = await getAllCustomersByOrg(req.orgId);
     }
     
     return res.json(customers);
@@ -44,7 +51,7 @@ exports.list = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const customer = await getCustomerById(req.params.id);
+    const customer = await getCustomerByIdAndOrg(req.params.id, req.orgId);
 
     if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
@@ -58,17 +65,27 @@ exports.getById = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
   try {
     const normalized = normalizeCustomerPayload(req.body);
     const validated = createCustomerSchema.parse(normalized);
 
-    const created = await createCustomer(validated);
-    return res.status(201).json(created);
+    try {
+      const created = await createCustomerForOrg(req.orgId, validated);
+      return res.status(201).json(created);
+    } catch (err) {
+      // Handle DB unique constraint (email) errors
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+      throw err;
+    }
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);
     }
-
     console.error('[CustomerController] Error creating customer:', error);
     return res.status(500).json({ error: 'Failed to create customer' });
   }
@@ -77,8 +94,12 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   const { id } = req.params;
 
+  if (!dbIsReady()) {
+    return res.status(503).json({ error: 'DatabaseUnavailable', message: 'Database is not ready' });
+  }
+
   try {
-    const existing = await getCustomerById(id);
+    const existing = await getCustomerByIdAndOrg(id, req.orgId);
 
     if (!existing) {
       return res.status(404).json({ error: 'Customer not found' });
@@ -87,11 +108,15 @@ exports.update = async (req, res) => {
     const normalized = normalizeCustomerPayload(req.body);
     const validated = updateCustomerSchema.parse(normalized);
 
-    const updated = await updateCustomer(id, validated);
+    const updated = await updateCustomerForOrg(req.orgId, id, validated);
     return res.json(updated);
   } catch (error) {
     if (error.name === 'ZodError') {
       return handleZodError(error, res);
+    }
+    // Handle DB unique constraint errors
+    if (error && error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Email already exists' });
     }
 
     console.error('[CustomerController] Error updating customer:', error);
@@ -103,7 +128,7 @@ exports.remove = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const removed = await deleteCustomer(id);
+    const removed = await deleteCustomerForOrg(req.orgId, id);
 
     if (!removed) {
       return res.status(404).json({ error: 'Customer not found' });
