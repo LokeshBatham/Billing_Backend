@@ -211,10 +211,6 @@ if (userRoutes) {
   app.use('/api/users', userRoutes);
   console.log('[App] User routes registered at /api/users');
 }
-if (billingRoutes) {
-  app.use('/api/billing-history', billingRoutes);
-  console.log('[App] Billing history routes registered at /api/billing-history');
-}
 
 // 404 handler for unmatched routes (must be last)
 // Note: Express 5 doesn't support /api/* pattern, so we use a catch-all

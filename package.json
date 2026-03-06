@@ -20,13 +20,9 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-<<<<<<< HEAD
     "mongoose": "^9.2.4",
-=======
-    "mongoose": "^9.0.2",
     "multer": "^2.0.2",
     "razorpay": "^2.9.6",
->>>>>>> 7855c5a059a4ce46300f2bdd0ef0c2b6da8ecd9b
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
     "zod": "^4.1.12"
