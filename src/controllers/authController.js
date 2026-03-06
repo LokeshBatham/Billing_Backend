@@ -1,5 +1,5 @@
 const { loginSchema, normalizeLoginPayload } = require('../validators/authValidator');
-const { authenticateUser } = require('../services/authService');
+const { authenticateUser, registerUser } = require('../services/authService');
 
 const handleZodError = (error, res) => {
   const details = error.errors.map((issue) => ({
@@ -29,9 +29,31 @@ exports.login = async (req, res) => {
       return handleZodError(error, res);
     }
 
-    // eslint-disable-next-line no-console
     console.error(error);
     return res.status(500).json({ error: 'Failed to login' });
   }
 };
 
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, companyName, contact, state, city } = req.body || {};
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const result = await registerUser({ name, email: email.trim(), password, companyName, contact, state, city });
+
+    if (result.error) {
+      return res.status(409).json({ error: result.error });
+    }
+
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error('[AuthController] Register error:', error);
+    return res.status(500).json({ error: 'Registration failed' });
+  }
+};

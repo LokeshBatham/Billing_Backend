@@ -1,13 +1,22 @@
 const path = require('path');
 const dotenv = require('dotenv');
-const app = require('./app');
 
+// Load env vars BEFORE anything else
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const port = process.env.PORT || 5000;
+const connectDB = require('./db');
+const app = require('./app');
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server listening on port ${port}`);
+const port = process.env.VITE_PORT || process.env.PORT || 5000;
+
+const start = async () => {
+  await connectDB();
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+};
+
+start().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
-

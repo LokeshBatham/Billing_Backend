@@ -1,17 +1,12 @@
-const { getAllInvoices } = require('./invoiceService');
+const Invoice = require('../models/Invoice');
 
-/**
- * Get all sales/invoices for reports
- * @returns {Promise<Array>} Array of formatted invoice/sale objects
- */
 exports.getSalesReport = async () => {
   try {
-    const invoices = await getAllInvoices();
-    
-    // Format invoices to match frontend Invoice type
+    const invoices = await Invoice.find().lean();
+
     const formattedSales = invoices.map((invoice) => ({
-      id: invoice.id,
-      date: invoice.date || invoice.createdDate || new Date().toISOString(),
+      id: invoice._id.toString(),
+      date: invoice.date || invoice.createdDate || (invoice.createdAt ? invoice.createdAt.toISOString() : new Date().toISOString()),
       total: invoice.total || 0,
       paymentMethod: invoice.paymentMethod || 'Cash',
       items: invoice.items || [],
@@ -29,4 +24,3 @@ exports.getSalesReport = async () => {
     throw error;
   }
 };
-

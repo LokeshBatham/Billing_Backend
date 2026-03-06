@@ -24,13 +24,14 @@ const handleZodError = (error, res) => {
   });
 };
 
-exports.list = async (_req, res) => {
+exports.list = async (req, res) => {
   try {
-    const products = await getAllProducts();
+    const { search } = req.query;
+    const products = await getAllProducts(search);
     return res.json(products);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error(error);
+    console.error('[ProductController] Error listing products:', error);
     return res.status(500).json({ error: 'Failed to fetch products' });
   }
 };
