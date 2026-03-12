@@ -2,7 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { findByEmail } = require('./userService');
 
-const getJwtSecret = () => process.env.JWT_SECRET || 'change_me_in_production';
+// Use the same secret resolution logic everywhere (auth, middleware, etc.)
+const getJwtSecret = () =>
+  process.env.VITE_JWT_SECRET || process.env.JWT_SECRET || 'change_me_in_production';
 
 const sanitizeUser = (user) => ({
   id: user._id,

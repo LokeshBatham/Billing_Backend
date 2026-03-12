@@ -39,14 +39,19 @@ const handleZodError = (error, res) => {
 };
 
 exports.list = async (req, res) => {
+  if (!dbIsReady()) {
+    return res
+      .status(503)
+      .json({ error: "DatabaseUnavailable", message: "Database is not ready" });
+  }
+
   try {
-    const { search } = req.query;
-    const products = await getAllProducts(search);
+    const products = req.orgId ? await getAllProductsByOrg(req.orgId) : await getAllProducts();
     return res.json(products);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('[ProductController] Error listing products:', error);
-    return res.status(500).json({ error: 'Failed to fetch products' });
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch products" });
   }
 };
 

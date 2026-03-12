@@ -22,4 +22,3 @@ exports.getDashboard = async (_req, res) => {
     });
   }
 };
-
