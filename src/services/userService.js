@@ -1,91 +1,87 @@
-const Register = require('../models/Register');
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
 
-exports.getProfile = async (userId) => {
-  if (userId) {
-    const user = await Register.findById(userId).lean();
-    if (user) {
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        companyName: user.companyName,
-        contact: user.contact,
-        orgId: user.orgId,
-        razorpayKeyId: user.razorpayKeyId,
-      };
-    }
+exports.findByEmail = async (email, orgId) => {
+  const query = { email: String(email).toLowerCase() };
+  if (orgId) query.orgId = orgId;
+  return User.findOne(query).exec();
+};
+
+exports.findByEmailAndCompanyName = async (email, companyName) => {
+  const normalizedEmail = String(email).toLowerCase().trim();
+  const normalizedCompanyName = String(companyName || '').trim();
+  
+  console.log("Finding user by:", { normalizedEmail, normalizedCompanyName });
+  
+  // Try exact match first
+  const exactQuery = {
+    email: normalizedEmail,
+    companyName: normalizedCompanyName,
+  };
+  
+  console.log("Exact query:", exactQuery);
+  let user = await User.findOne(exactQuery).exec();
+  console.log("Exact match result:", user ? "Found" : "Not found");
+  
+  // If no exact match, try case-insensitive match for company name
+  if (!user) {
+    const caseInsensitiveQuery = {
+      email: normalizedEmail,
+      companyName: { $regex: new RegExp('^' + normalizedCompanyName + '$', 'i') }
+    };
+    
+    console.log("Trying case-insensitive query:", caseInsensitiveQuery);
+    user = await User.findOne(caseInsensitiveQuery).exec();
+    console.log("Case-insensitive result:", user ? "Found" : "Not found");
   }
-  return { id: 'unknown', name: 'User', email: '', role: 'admin' };
+  
+  // If still no match, try to find user with null/undefined companyName (for staff users created without company)
+  if (!user && normalizedCompanyName) {
+    const nullCompanyQuery = {
+      email: normalizedEmail,
+      $or: [
+        { companyName: null },
+        { companyName: undefined },
+        { companyName: { $exists: false } },
+        { companyName: '' }
+      ]
+    };
+    
+    console.log("Trying null/undefined company query:", nullCompanyQuery);
+    user = await User.findOne(nullCompanyQuery).exec();
+    console.log("Null/undefined company result:", user ? "Found" : "Not found");
+  }
+  
+  // If still no match, try to find user by email only and log all matching users
+  if (!user) {
+    console.log("No match found, checking all users with this email...");
+    const usersByEmail = await User.find({ email: normalizedEmail }).select('email companyName role').exec();
+    console.log("Users with this email:", usersByEmail.map(u => ({ email: u.email, companyName: u.companyName, role: u.role })));
+  }
+  
+  return user;
 };
 
-exports.getAllStaff = async (orgId) => {
-  const filter = orgId ? { orgId, role: { $ne: 'admin' } } : { role: { $ne: 'admin' } };
-  const users = await Register.find(filter).lean();
-  return users.map((u) => ({
-    id: u._id.toString(),
-    name: u.name,
-    email: u.email,
-    role: u.role,
-    contact: u.contact,
-    status: u.status || 'active',
-    orgId: u.orgId,
-  }));
-};
-
-exports.getUserById = async (id) => {
-  const user = await Register.findById(id).lean();
-  if (!user) return null;
-  return {
-    id: user._id.toString(),
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    contact: user.contact,
-    orgId: user.orgId,
+exports.createUser = async ({ orgId, name, contact, email, companyName, state, city, role, permissions, status, createdAt, password }) => {
+  const doc = {
+    orgId,
+    name,
+    contact,
+    email: String(email).toLowerCase(),
+    companyName,
+    state,
+    city,
+    role,
+    permissions: Array.isArray(permissions) ? permissions : undefined,
+    status,
+    createdAt,
   };
-};
 
-exports.createStaff = async (payload) => {
-  const bcrypt = require('bcryptjs');
-  const passwordHash = payload.password ? await bcrypt.hash(payload.password, 10) : undefined;
-  const user = await Register.create({
-    ...payload,
-    passwordHash,
-    role: payload.role || 'staff',
-  });
-  return {
-    id: user._id.toString(),
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    contact: user.contact,
-  };
-};
+  if (password) {
+    const hash = await bcrypt.hash(password, 10);
+    doc.passwordHash = hash;
+  }
 
-exports.updateStaff = async (id, payload) => {
-  const user = await Register.findByIdAndUpdate(id, payload, { new: true }).lean();
-  if (!user) return null;
-  return {
-    id: user._id.toString(),
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    contact: user.contact,
-    status: user.status || 'active',
-  };
-};
-
-exports.updateStaffStatus = async (id, status) => {
-  return exports.updateStaff(id, { status });
-};
-
-exports.deleteStaff = async (id) => {
-  const result = await Register.findByIdAndDelete(id);
-  return !!result;
-};
-
-exports.updateRazorpayKey = async (userId, razorpayKeyId) => {
-  const user = await Register.findByIdAndUpdate(userId, { razorpayKeyId }, { new: true }).lean();
-  return { razorpayKeyId: user?.razorpayKeyId, updatedAt: user?.updatedAt };
+  const user = await User.create(doc);
+  return user;
 };

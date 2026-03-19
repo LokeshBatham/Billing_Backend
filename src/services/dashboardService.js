@@ -44,4 +44,3 @@ exports.getDashboardData = async (orgId) => {
     throw error;
   }
 };
-

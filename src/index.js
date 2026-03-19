@@ -4,13 +4,16 @@ const dotenv = require('dotenv');
 // Load env vars BEFORE anything else
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const connectDB = require('./db');
+// Use the shared DB utility that also exposes isReady()
+const { init: initDb } = require('./utils/db');
 const app = require('./app');
 
 const port = process.env.VITE_PORT || process.env.PORT || 5000;
 
 const start = async () => {
-  await connectDB();
+  // Initialize Mongo connection and mark DB as ready for controllers
+  await initDb();
+
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });

@@ -12,7 +12,9 @@ const LoginLog = require("../models/LoginLog");
 const Tenant = require("../models/Tenant");
 const jwt = require("jsonwebtoken");
 const { v4: uuid } = require('uuid');
-const getJwtSecret = () => process.env.JWT_SECRET || "change_me_in_production";
+// Use the same secret resolution logic as authMiddleware/authService
+const getJwtSecret = () =>
+  process.env.VITE_JWT_SECRET || process.env.JWT_SECRET || "change_me_in_production";
 
 const timestamp = () => new Date().toISOString();
 

@@ -4,6 +4,6 @@ const refundController = require('../controllers/refundController');
 const router = express.Router();
 
 router.get('/', refundController.list);
-router.post('/', refundController.create);
+router.post('/', refundController.createRefund);
 
 module.exports = router;
